@@ -12,6 +12,10 @@ for details on getting up and running with your very own robot friend.
 In most cases, you'll probably never have to hack on this repo directly if you
 are building your own bot. But if you do, check out [CONTRIBUTING.md](CONTRIBUTING.md)
 
+## Fork Specifics
+
+This fork aims to add support for nestled commands, through a syntax like Bash subshells $(), brackets [], or even pipes |.
+
 ## License
 
 Copyright (c) 2011-2013 GitHub, Inc. See the LICENSE file for license rights and
