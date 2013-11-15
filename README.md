@@ -14,7 +14,7 @@ are building your own bot. But if you do, check out [CONTRIBUTING.md](CONTRIBUTI
 
 ## Fork Specifics
 
-This fork aims to add support for nestled commands, through a syntax like Bash subshells $(), brackets [], or even pipes |.
+This fork aims to add support for nested commands, through a syntax like Bash subshells $(), brackets [], or even pipes |.
 
 ## License
 

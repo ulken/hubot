@@ -6,7 +6,7 @@ HttpClient     = require 'scoped-http-client'
 
 User = require './user'
 Brain = require './brain'
-Response = require './response'
+{Response,Result} = require './response'
 {Listener,TextListener} = require './listener'
 {EnterMessage,LeaveMessage,TopicMessage,CatchAllMessage} = require './message'
 
@@ -45,6 +45,7 @@ class Robot
     @alias     = false
     @adapter   = null
     @Response  = Response
+    @Result    = Result
     @commands  = []
     @listeners = []
     @logger    = new Log process.env.HUBOT_LOG_LEVEL or 'info'
@@ -56,6 +57,10 @@ class Robot
       @setupNullRouter()
     @pingIntervalId = null
     @loadAdapter adapterPath, adapter
+
+    # For nesting
+    @robot.on '_result', @process
+    @robot.on '_final', @broadcast
 
   # Public: Adds a Listener that attempts to match incoming messages based on
   # a Regex.
@@ -150,13 +155,61 @@ class Robot
       ((msg) -> msg.message = msg.message.message; callback msg)
     )
 
+  # Public: Preprocess a message, inlining any nested commands, before making
+  # the final call.
+  #
+  # message - A Message instance.
+  #
+  # Returns nothing.
+  receive: (message) ->
+    if subcommands = unroll command
+      message.subcommands = subcommands
+      envelope =
+        user: message.user
+        room: message.room
+        message: message
+      @process envelope
+    else
+      @robit.emit '_final', message
+
+  # Private: Evaluates first level subcommand of `envelope`'s Message instance
+  #
+  # envelope - Envelope instance
+  # result   - Result of previous subcommand
+  #
+  # Returns nothing.
+  process: (envelope, result) ->
+    message = envelope.message
+    subcommand = message.subcommands.pop()
+    @inline subcommand, result if result
+    message.text = subcommand
+    if message.subcommands.length
+      @_broadcast message
+    else
+      delete message.subcommands
+      @broadcast message
+
+  # Private: Passes the given message (with subcommands) to any interested Listeners.
+  #
+  # message - A Message instance (with subcommands). Listeners can flag this message
+  # as 'done' to prevent further execution.
+  #
+  # Returns nothing.
+  _broadcast: (message) ->
+    for listener in @listeners
+      try
+        listener._call(message)
+        break if message.done
+      catch error
+        @logger.error "Unable to call the listener: #{error}\n#{error.stack}"
+
   # Public: Passes the given message to any interested Listeners.
   #
   # message - A Message instance. Listeners can flag this message as 'done' to
   #           prevent further execution.
   #
   # Returns nothing.
-  receive: (message) ->
+  broadcast: (message) ->
     results = []
     for listener in @listeners
       try
@@ -167,6 +220,29 @@ class Robot
         false
     if message not instanceof CatchAllMessage and results.indexOf(true) is -1
       @receive new CatchAllMessage(message)
+
+  # Private: Unrolls a command, identifying all subcommands.
+  #
+  # command - A command String.
+  #
+  # Returns an array with all subcommands, or null if none.
+  unroll: (command) ->
+    subcommands = [command]
+    while match = /\[(.*)\]/.exec command
+      command = match[1]
+      subcommands.push command
+    if subcommands.length > 1 then subcommands else null
+
+  # Private: Inlines result of first-level subcommand.
+  #
+  # parent - Parent command.
+  # result - Result of executing `subcommand`.
+  #
+  # Note: Changes original string.
+  #
+  # Returns parent with `result` inlined.
+  inline: (parent, result) ->
+    parent = parent.replace /\[.*\]/, result
 
   # Public: Loads a file in path.
   #

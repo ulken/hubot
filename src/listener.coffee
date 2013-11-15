@@ -29,6 +29,20 @@ class Listener
     else
       false
 
+  # Private: Internal call, returning result to robot.
+  #
+  # message - A Message instance.
+  #
+  # Returns nothing.
+  _call: (message) ->
+    if match = @matcher message
+      @robot.logger.debug \
+        "Message '#{message}' matched regex /#{inspect @regex}/" if @regex
+
+      @callback new @robot.Result(@robot, message, match)
+      # One result is enough
+      message.finish()
+
 class TextListener extends Listener
   # TextListeners receive every message from the chat source and decide if they
   # want to act on it.

@@ -89,4 +89,40 @@ class Response
   http: (url) ->
     @robot.http(url)
 
-module.exports = Response
+class Result extends Response
+  # Public: Results are used to handle computations of subcommands.
+  #
+  # robot   - A Robot instance.
+  # message - A Message instance.
+  # match   - A Match object from the successful Regex match.
+  constructor: (@robot, @message, @match) ->
+    super @robot, @message, @match
+
+  # Public: Return results to robot.
+  #
+  # strings - Result strings
+  #
+  # Returns nothing.
+  send: (strings...) ->
+    @robot.emit '_result', @envelope, strings.join '\n'
+
+  # Public: Return results to robot.
+  #
+  # strings - Result strings
+  #
+  # Returns nothing.
+  emote: (strings...) ->
+    @robot.emit '_result', @envelope, strings.join '\n'
+
+  # Public: Return results to robot.
+  #
+  # strings - Result strings
+  #
+  # Returns nothing.
+  reply: (strings...) ->
+    @robot.emit '_result', @envelope, strings.join '\n'
+
+module.exports = {
+  Response
+  Result
+}
